@@ -1,79 +1,86 @@
 import React,{ Component } from 'react';
 import UnitList from './UnitList'
+import axios from 'axios';
 
 class QuantityList extends Component{
     constructor(props){
         super(props);
         this.state = {
         selectedQty: '',    
-        quantities:[
-            {id:'LEN',name:'LENGTH'},
-            {id:'MAS',name:'MASS'},
-            {id:'VOL',name:'VOLUME'},
-            {id:'TEMP',name:'TEMPERATURE'}
-        ],
-        units:[]
+        quantities:[],
+        units:[],
+        inputValue:'',
+        inputUnit:'',
+        outputUnit:'',
+        outputValue:''
         }
     }
+    
+    componentDidMount(){
+        axios.get(`http://localhost:8080/quantity`)
+        .then(res =>{ console.log(res.data);
+        this.setState({ quantities: res.data });
+         })
+       
+     }
 
     handleChange = async(e) => {
         await this.setState({ selectedQty: e.target.value });
-        console.log('123334',this.state.selectedQty)
-        if(this.state.selectedQty === "LENGTH"){
-            this.setState({
-                units:[
-                    {id:'1',name:'INCH'},
-                    {id:'2',name:'FEET'},
-                    {id:'3',name:'CM'},
-                    {id:'4',name:'YARD'}
-                ]
-            })
-            }
-        else if(this.state.selectedQty === "MASS"){
-            this.setState({
-                units:[
-                    {id:'1',name:'GRAM'},
-                    {id:'2',name:'KG'},
-                    {id:'3',name:'TONNE'}
-                ]
-            })
-        }
-        else if(this.state.selectedQty === "VOLUME"){
-            this.setState({
-                units:[
-                    {id:'1',name:'MILLILITRE'},
-                    {id:'2',name:'LITRE'},
-                    {id:'3',name:'GALLON'}
-                ]
-            });
-        }  
-        else{
-            this.setState({
-                units:[
-                    {id:'1',name:'CELSIUS'},
-                    {id:'2',name:'FAHRENHEIT'}
-                ]
-            });
-        }    
+        console.log('Selected Quantity is:',this.state.selectedQty);
+        
+        axios.get(`http://localhost:8080/quantity/${this.state.selectedQty}`)
+        .then(res =>{ console.log(res.data);
+            this.setState({ units: res.data });
+        })
     }
-    
-    render(){
-        let quantityList = this.state.quantities.length > 0 
-            && this.state.quantities.map((item,i) => {
-        return(
-            <option key={i} value={item.name}>{item.name}</option>
-            )    
-        },this);
+
+    handleChangeInputUnit = (e) =>{
+        console.log("input unit is",e)
+        this.setState({
+            inputUnit: e
+        })
+    }
+
+    handleChangeOutputUnit = (e) =>{
+        console.log("output unit is",e)
+        this.setState({
+            outputUnit: e
+        })
+    }
+
+    handleValueChange = async(e) => {
+        console.log("value is :",e);
+        await this.setState({
+            inputValue: e
+        })
+        fetch("http://localhost:8080/quantity/conversion/" + this.state.outputUnit,{
+            method:'POST',
+            headers:{
+                "Content-Type": "Application/json"
+            },
+            body:JSON.stringify({"value":this.state.inputValue,"quantityUnits":this.state.inputUnit})
+        }).then(res =>  res.json())
+          .then(json => {
+            console.log("Output value is:",json)  
+            this.setState({ 
+                outputValue: json
+             })
+          })                 
+        }
+
+     render(){
         
         return(
             <div className="flex-container">
              <div>
-                <select style={{width:'275%',height:'30px',backgroundColor:'lavenderblush'}} defaultValue={this.state.selectedQty} onChange={this.handleChange}>
-                {quantityList}
+                <select style={{width:'275%',height:'30px',backgroundColor:'lavenderblush'}} 
+                defaultValue={this.state.selectedQty} onChange={this.handleChange}>
+                {this.state.quantities.map(e => <option>{e}</option>)}
                 </select>
              </div>
              <br/>
-            <UnitList qty={this.state.selectedQty} unitArray={this.state.units}/>
+            <UnitList qty={this.state.selectedQty} unitArray={this.state.units} 
+            input={this.handleChangeInputUnit} output={this.handleChangeOutputUnit} valChange={this.handleValueChange} op={this.state.outputValue}/>
             </div>
         );
     }
